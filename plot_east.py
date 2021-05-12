@@ -13,6 +13,8 @@ import tkinter as tk
 import matplotlib.pyplot as plt
 import numpy as np
 from east_mds import get_data as get
+from east_mds import  filter
+
 
 
 
@@ -46,14 +48,21 @@ for i in range(1, 8):
     names['tree'+str(i)].place(x=180, y=10+25*i, width=80)
 
 tmp = tk.Label(window, text='begin')
-tmp.place(x=30, y=230)
+tmp.place(x=10, y=230)
 begin = tk.Entry()
-begin.place(x=70, y=230, width=50)
+begin.place(x=50, y=230, width=40)
 
 tmp = tk.Label(window, text='end')
-tmp.place(x=130, y=230)
+tmp.place(x=100, y=230)
 end = tk.Entry()
-end.place(x=160, y=230, width=50)
+end.place(x=130, y=230, width=40)
+
+tmp = tk.Label(window, text='filter')
+tmp.place(x=180, y=240)
+low_filter = tk.Entry()
+low_filter.place(x=210, y=230, width=40)
+up_filter = tk.Entry()
+up_filter.place(x=210, y=250, width=40)
 
 
 
@@ -91,7 +100,18 @@ def get_input():
     begin_time = int(begin_time)
     end_time = int(end_time)
 
-    return shots, signals, trees, begin_time, end_time
+    low_frequency= low_filter.get()
+    if len(low_frequency)==0:
+        low_frequency = 0
+    low_frequency= int(low_frequency)
+
+    up_frequency= up_filter.get()
+    if len(up_frequency)==0:
+        up_frequency = 0
+    up_frequency= int(up_frequency)
+    
+
+    return shots, signals, trees, begin_time, end_time, low_frequency, up_frequency
 
 
 
@@ -99,7 +119,7 @@ def plot_data():
 
     plt.figure(figsize=(9, 12))
 
-    [shots, signals, trees, begin, end] = get_input()
+    [shots, signals, trees, begin, end, low_filter, up_filter] = get_input()
 
     i = 0
     colors = ['b', 'r', 'g', 'k', 'y']
@@ -112,9 +132,25 @@ def plot_data():
             color = colors[j]
             j = j+1
             [t, y] = get.data(signal, shot, tree)
-            index = np.where((t>=begin)&(t<=end))
+            
+            index = np.where((t>=begin)&(t<=end))            
             t = t[index]
             y = y[index]
+
+            if up_filter != 0:
+                fs = 100/(t[100]-t[0])
+                if low_filter == 0:
+                    y = filter.high_pass(y, up_filter, fs)
+                elif up_filter >= 0.5*fs:
+                    y = filter.low_pass(y, low_filter, fs)
+                else:
+                    y = filter.band_stop(y, low_filter, up_filter, fs)
+                
+                
+                
+            
+            
+            
             plt.subplot(n, 1, i)
             if i==1:
                 plt.plot(t, y, color=color, label=str(shot))
